@@ -1,0 +1,1880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Negative Exponents Day Three</title>
+<style>
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: #f4f6f9;
+        color: #1a202c;
+        margin: 0;
+        padding: clamp(6px, 1.2vh, 14px) clamp(8px, 1.2vw, 18px);
+        font-weight: 600;
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        -webkit-user-select: none;
+        user-select: none;
+    }
+
+    h1 {
+        color: #1a365d;
+        margin: 0 0 clamp(6px, 1vh, 12px);
+        font-size: clamp(1.3rem, min(3.6vw, 5.2vh), 3.6rem);
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        text-align: center;
+        flex: none;
+    }
+
+    #quiz-container { width: 100%; flex: 1; min-height: 0; display: flex; }
+
+    .card {
+        background: #ffffff;
+        border-radius: 16px;
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+        padding: clamp(10px, 1.8vh, 24px) clamp(10px, 2vw, 32px);
+        width: 100%;
+        max-width: none;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .problem-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 16px;
+        font-weight: 800;
+        font-size: clamp(1rem, min(2.4vw, 3.6vh), 2.6rem);
+        color: #2b6cb0;
+        flex: none;
+    }
+    .hint { color: #4a5568; font-size: clamp(0.9rem, min(2vw, 3vh), 2.1rem); text-align: right; font-weight: 700; }
+
+    .t1 { color: #2b6cb0; }
+    .t2 { color: #c53030; }
+
+    /* ---------- the equation chain ---------- */
+    .chain {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        align-content: center;
+        flex-wrap: wrap;
+        flex: 1;
+        min-height: 0;
+        row-gap: clamp(10px, 2.2vh, 22px);
+        font-size: min(9vw, 16vh);
+        font-weight: 800;
+        gap: clamp(6px, 1.4vw, 18px);
+        padding: clamp(4px, 1vh, 12px) 0;
+        line-height: 1.15;
+    }
+    .step, .eq { display: inline-flex; align-items: center; }
+    .off { display: none !important; }
+    .eq { color: #4a5568; }
+    .step.tight { font-size: 0.66em; }
+    .step.snug  { font-size: 0.82em; }
+
+    .grp { display: inline-flex; align-items: center; }
+    .op  { color: #4a5568; padding: 0 0.25em; }
+    .neg { color: #1a202c; padding-right: 0.08em; }
+    .mul { color: #718096; padding: 0 0.22em; }
+    .paren { font-size: 1.75em; font-weight: 400; color: #4a5568; line-height: 0.72; padding: 0 0.02em; }
+
+    .frac { display: inline-flex; flex-direction: column; text-align: center; }
+    .frac > span { display: block; }
+    .num { border-bottom: max(3px, 0.07em) solid #2d3748; padding: 0 0.2em 0.1em; }
+    .denom { padding: 0.1em 0.2em 0; }
+
+    /* A faint bar with a faint 1 under it, used at both ends of the move.
+       At the start it fades in under a whole-number expression, so the term
+       lifts into a numerator and there is a bar for it to fall through.
+       At the finish it holds the landing spot at numerator height, then
+       dissolves once the move has been made.
+       Adding .dissolved collapses it; removing .dissolved grows it back. */
+    .frac.scaffold > .num { border-bottom-color: #cbd5e0; transition: border-color 0.45s ease-out; }
+    .frac.scaffold > .denom {
+        color: #cbd5e0;
+        overflow: hidden;
+        max-height: 2em;
+        transition: opacity 0.45s ease-out, max-height 0.45s ease-out, padding 0.45s ease-out;
+    }
+    .frac.scaffold.dissolved > .num { border-bottom-color: transparent; }
+    .frac.scaffold.dissolved > .denom { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; }
+
+    sup { font-size: 0.58em; vertical-align: baseline; position: relative; top: -0.62em; margin-left: 1px; }
+
+    /* draggable originals */
+    .term {
+        display: inline-block;
+        white-space: nowrap;
+        padding: 2px 10px;
+        border-radius: 12px;
+    }
+    .term.src {
+        background: #ebf8ff;
+        box-shadow: 0 2px 0 #bee3f8;
+        cursor: grab;
+        touch-action: none;
+        transition: background 0.15s, box-shadow 0.15s, opacity 0.3s;
+    }
+    .term.src:hover { background: #dceeff; }
+    .term.src:focus-visible { outline: 3px solid #3182ce; outline-offset: 2px; }
+    .term.src.used {
+        background: #f0fff4;
+        box-shadow: 0 2px 0 #c6f6d5;
+        cursor: default;
+        opacity: 0.5;
+    }
+    .term.ghost {
+        position: fixed;
+        z-index: 60;
+        background: #ffffff;
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+        pointer-events: none;
+        margin: 0;
+    }
+    .term.landed { background: #f0fff4; box-shadow: 0 2px 0 #c6f6d5; }
+    .shake { animation: shake 0.35s ease-in-out; }
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-8px); }
+        75% { transform: translateX(8px); }
+    }
+
+    /* drop slots in the rewritten fraction */
+    .drop-slot {
+        min-width: 2.6em;
+        min-height: 1.5em;
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        color: #cbd5e0;
+        box-shadow: inset 0 0 0 3px #e2e8f0;
+        transition: background 0.15s, box-shadow 0.15s, color 0.15s;
+    }
+    .drop-slot.armed { box-shadow: inset 0 0 0 3px #cbd5e0; }
+    .drop-slot.eligible { background: #f0fff4; box-shadow: inset 0 0 0 3px #68d391; color: #68d391; }
+    .drop-slot.filled { box-shadow: none; padding: 0; min-width: 0; }
+
+    .exp-sign { display: inline-block; overflow: hidden; max-width: 1.2em; transition: max-width 0.3s ease-out, opacity 0.25s ease-out; }
+    .exp-sign.gone { max-width: 0; opacity: 0; }
+    .exp-num { display: inline-block; transition: color 0.3s ease-out, transform 0.3s ease-out; }
+    .exp-num.flipped { color: #2f855a; transform: scale(1.25); }
+
+    /* expanded factors + cross-outs */
+    .fact, .dot { position: relative; display: inline-block; padding: 0 1px; transition: color 0.3s ease-out; }
+    .dot { padding: 0 4px; color: #718096; }
+    .fact::after, .dot::after {
+        content: '';
+        position: absolute;
+        left: -8%; right: -8%; top: 52%;
+        height: 0.09em;
+        min-height: 3px;
+        background: #e53e3e;
+        border-radius: 3px;
+        transform: scaleX(0);
+        transform-origin: left center;
+        transition: transform 0.3s ease-out;
+    }
+    .fact.struck::after, .dot.struck::after { transform: scaleX(1); }
+    .fact.struck, .dot.struck { color: #a0aec0; }
+
+    .fact.pickable {
+        cursor: pointer;
+        border-radius: 8px;
+        box-shadow: inset 0 0 0 2px #e2e8f0;
+        transition: color 0.3s ease-out, background 0.15s, box-shadow 0.15s;
+    }
+    .fact.pickable:hover { background: #fff5f5; box-shadow: inset 0 0 0 2px #feb2b2; }
+    .fact.pickable:focus-visible { outline: 3px solid #3182ce; outline-offset: 2px; }
+    .fact.pickable.struck { box-shadow: none; background: transparent; }
+
+    .tail-one, .dot.tail { color: #2b6cb0; }
+    .tail-one { display: inline-block; padding: 0 3px; }
+
+    .pop { animation: pop 0.35s ease-out; }
+    @keyframes pop { from { opacity: 0; transform: scale(0.65); } to { opacity: 1; transform: scale(1); } }
+
+    /* answer entry */
+    .ans-input {
+        font-family: inherit;
+        font-weight: 800;
+        font-size: 0.92em;
+        width: 5em;
+        text-align: center;
+        padding: 0.1em 0.15em;
+        border: max(3px, 0.06em) dashed #90cdf4;
+        border-radius: 12px;
+        background: #f7fbff;
+        color: #2b6cb0;
+        -webkit-user-select: text;
+        user-select: text;
+    }
+    .ans-input:focus { outline: none; border-color: #3182ce; border-style: solid; background: #ffffff; }
+    .ans-input.wrong { border-color: #fc8181; background: #fff5f5; color: #c53030; }
+    .ans-input.wide { width: 7em; }
+
+    .final { color: #2f855a; }
+
+    /* a mixed number: the whole part sits beside the fraction, not above it */
+    .mixed { display: inline-flex; align-items: center; gap: 0.18em; }
+    .whole { display: inline-block; }
+
+    .feedback {
+        font-weight: 800;
+        font-size: clamp(1.1rem, min(3vw, 4.4vh), 3.2rem);
+        text-align: center;
+        min-height: 1.4em;
+        flex: none;
+    }
+    .correct { color: #38a169; }
+    .walk-cap { color: #2d3748; }
+    .fitting .pop { animation: none !important; }
+
+    /* ---------- the "why does it work" walkthroughs (problems 1 and 2) ---------- */
+    .walk {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0.35em;
+        flex: 1;
+        min-height: 0;
+        font-size: min(9vw, 16vh);
+        font-weight: 800;
+        line-height: 1.15;
+        padding: clamp(4px, 1vh, 12px) 0;
+    }
+    .walk > :first-child { margin-top: auto; }
+    .walk > :last-child { margin-bottom: auto; }
+    .w-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.18em; }
+    .w-title { font-size: 0.42em; color: #1a365d; letter-spacing: 0.04em; }
+    .w-ask { color: #a0aec0; }
+    .w-note { font-size: 0.62em; gap: 0.25em; color: #4a5568; }
+    .w-so {
+        font-size: 0.8em;
+        gap: 0.3em;
+        padding: 0.1em 0.5em;
+        border-radius: 0.3em;
+        background: #f0fff4;
+        box-shadow: inset 0 0 0 max(3px, 0.05em) #9ae6b4;
+    }
+    .w-so .w-word { font-size: 0.55em; color: #2f855a; letter-spacing: 0.05em; }
+    .w-plus { color: #c53030; }
+    .w-pos { color: #2f855a; }
+    .w-one { color: #1a202c; }
+    .walk-nav { display: flex; gap: 14px; align-items: center; }
+    .walk-back {
+        background: #ffffff; color: #2b6cb0;
+        box-shadow: inset 0 0 0 3px #bee3f8;
+        padding: clamp(8px, 1.4vh, 20px) clamp(16px, 2.4vw, 36px);
+        font-size: clamp(1.1rem, min(2.6vw, 3.8vh), 2.8rem);
+    }
+    .walk-back:hover { background: #ebf8ff; }
+    .walk-back[disabled] { opacity: 0.35; cursor: default; }
+    .nudge { color: #dd6b20; }
+    .divnote {
+        margin-top: 0.35em;
+        color: #2d3748;
+        font-size: 0.9em;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.2em 0.5em;
+    }
+    .divchain { display: inline-flex; align-items: center; gap: 0.3em; color: #2b6cb0; white-space: nowrap; }
+    .divchain .frac { font-size: 0.8em; }
+    .divchain .frac .frac { font-size: 1em; }
+    .recip { font-size: 1.12em; }
+    .recip .frac { font-size: 0.9em; }
+    .recip .divchain { flex-wrap: wrap; justify-content: center; white-space: normal; row-gap: 0.4em; gap: 0.4em 0.3em; }
+    .recip .piece { display: inline-flex; align-items: center; gap: 0.3em; white-space: nowrap; }
+    .divchain .op { padding: 0 0.1em; color: #4a5568; }
+    .divnote + .divnote { margin-top: 0.2em; }
+    .divchain .num { border-bottom-width: 2px; padding: 0 6px 3px; }
+    .divchain .denom { padding: 3px 6px 0; }
+
+    .action-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: clamp(8px, 1.5vh, 16px);
+        flex: none;
+    }
+    button {
+        font-family: inherit;
+        font-weight: 800;
+        border-radius: 14px;
+        cursor: pointer;
+        border: none;
+        transition: background 0.2s;
+    }
+    button:focus-visible { outline: 3px solid #1a365d; outline-offset: 3px; }
+    .act-btn, .next-btn, .check-btn {
+        color: white;
+        padding: clamp(8px, 1.4vh, 20px) clamp(20px, 3.4vw, 48px);
+        font-size: clamp(1.1rem, min(2.6vw, 3.8vh), 2.8rem);
+    }
+    .act-btn { background-color: #2b6cb0; }
+    .act-btn:hover { background-color: #2c5282; }
+    .check-btn { background-color: #2b6cb0; }
+    .check-btn:hover { background-color: #2c5282; }
+    .next-btn { background-color: #38a169; }
+    .next-btn:hover { background-color: #2f855a; }
+    /* ---------- turning it in ---------- */
+    .head-left { display: inline-flex; align-items: baseline; gap: 12px; }
+    /* always on screen, so a student who runs out of time can send what they have */
+    .turnin-link {
+        background: #ffffff; color: #2b6cb0;
+        border: 2px solid #bee3f8;
+        font-size: 0.75em; padding: 3px 12px;
+    }
+    .turnin-link:hover { border-color: #90cdf4; background: #ebf8ff; }
+    .turnin {
+        position: fixed; inset: 0; z-index: 100; overflow: auto;
+        background: #f4f6f9;
+        -webkit-user-select: text; user-select: text;
+    }
+    .ti-inner {
+        max-width: 640px; margin: clamp(12px, 4vh, 40px) auto; padding: 28px clamp(18px, 4vw, 36px) 32px;
+        background: #ffffff; border-radius: 16px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+    }
+    .ti-inner h2 { color: #1a365d; font-size: 1.6rem; font-weight: 800; margin: 0 0 6px; letter-spacing: -0.01em; }
+    .ti-inner h3 { color: #1a365d; font-size: 1.05rem; font-weight: 800; margin: 26px 0 10px; }
+    .ti-sub { color: #718096; font-weight: 600; line-height: 1.55; margin: 0 0 20px; }
+    .ti-recap { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+    .ti-recap > div {
+        border: 2px solid #e2e8f0; border-radius: 12px; padding: 10px 14px;
+        color: #718096; font-size: 0.85rem;
+    }
+    .ti-recap b { display: block; color: #1a202c; font-size: 1.6rem; font-weight: 800; }
+    .ti-log {
+        max-height: 260px; overflow: auto; margin-top: 16px; padding: 6px 0;
+        border-top: 2px solid #e2e8f0; border-bottom: 2px solid #e2e8f0;
+    }
+    .ti-empty { color: #a0aec0; margin-top: 14px; }
+    .ti-row { display: flex; gap: 10px; align-items: baseline; padding: 5px 2px; font-size: 1.02rem; }
+    .ti-n { color: #a0aec0; min-width: 28px; text-align: right; font-size: 0.85rem; }
+    .ti-q { flex: 1; min-width: 0; }
+    .ti-k { font-size: 0.8rem; white-space: nowrap; color: #38a169; }
+    .ti-k.retry { color: #dd6b20; }
+    #gform { margin-top: 4px; }
+    .ti-warn {
+        background: #fefcbf; color: #744210; border-radius: 10px; padding: 11px 14px;
+        margin-bottom: 18px; line-height: 1.55; font-size: 0.92rem;
+    }
+    .ti-field { margin-bottom: 14px; }
+    .ti-field label { display: block; margin-bottom: 6px; color: #2d3748; }
+    .ti-field label em { font-style: normal; color: #a0aec0; font-weight: 600; font-size: 0.88rem; }
+    .ti-num {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 22px; height: 22px; margin-right: 8px; border-radius: 50%;
+        background: #2b6cb0; color: #ffffff; font-size: 0.8rem;
+    }
+    .ti-field input {
+        font-family: inherit; font-size: 1.05rem; font-weight: 700; color: #1a202c; width: 100%;
+        border: 2px solid #cbd5e0; border-radius: 10px; padding: 9px 12px; background: #ffffff;
+    }
+    .ti-field input:focus { outline: none; border-color: #3182ce; }
+    .ti-check { border: 2px solid #e2e8f0; border-radius: 12px; padding: 11px 14px; margin: 4px 0 16px; background: #f7fafc; }
+    .ti-check .head { color: #718096; font-size: 0.88rem; margin-bottom: 8px; }
+    .ti-check .row { display: flex; gap: 12px; align-items: baseline; margin-bottom: 4px; }
+    .ti-check .row:last-child { margin-bottom: 0; padding-top: 6px; border-top: 2px solid #e2e8f0; }
+    .ti-check .t { color: #a0aec0; min-width: 88px; font-size: 0.85rem; }
+    .ti-check .v { color: #1a202c; }
+    .ti-check .v.empty { color: #cbd5e0; }
+    .ti-feedback { margin-top: 14px; min-height: 1.2em; }
+    .ti-feedback .ok { color: #2f855a; }
+    .ti-feedback .note { color: #718096; }
+    .ti-after {
+        margin-top: 20px; padding-top: 16px; border-top: 2px solid #e2e8f0;
+        display: flex; gap: 12px; align-items: center; flex-wrap: wrap; color: #718096;
+    }
+    .ti-ghost {
+        background: #edf2f7; color: #2d3748; padding: 8px 16px; font-size: 0.95rem;
+    }
+    .ti-ghost:hover { background: #e2e8f0; }
+
+    @media (prefers-reduced-motion: reduce) {
+        * { transition: none !important; animation: none !important; }
+    }
+</style>
+</head>
+<body>
+
+<h1>Negative Exponents &mdash; Day Three</h1>
+
+<div id="quiz-container">
+    <div class="card">
+        <div class="problem-header">
+            <span class="head-left">
+                <span id="problem-title">Problem 1 of 21</span>
+                <button class="turnin-link" id="turnin-link" type="button">Turn in</button>
+            </span>
+            <span class="hint" id="hint-text"></span>
+        </div>
+
+        <div class="walk off" id="walk" aria-live="polite"></div>
+
+        <div class="chain" id="chain">
+            <span class="step" id="step-orig"></span>
+            <span class="eq off" id="eq-1">=</span>
+            <span class="step off" id="step-flip"></span>
+            <span class="eq off" id="eq-2">=</span>
+            <span class="step off" id="step-expand"></span>
+            <span class="eq off" id="eq-3">=</span>
+            <span class="step off" id="step-left"></span>
+            <span class="eq off" id="eq-4">=</span>
+            <span class="step off" id="step-ans"></span>
+            <span class="eq off" id="eq-5">=</span>
+            <span class="step off" id="step-mixed"></span>
+        </div>
+
+        <div class="feedback" id="feedback"></div>
+
+        <div class="action-container">
+            <span class="walk-nav off" id="walk-nav">
+                <button class="walk-back" id="walk-back" type="button">&larr; Back</button>
+                <button class="act-btn" id="walk-next" type="button">Next step &rarr;</button>
+            </span>
+            <button class="act-btn off" id="act-btn"></button>
+            <button class="check-btn off" id="check-btn">Check</button>
+            <button class="next-btn off" id="next-btn">Next problem</button>
+        </div>
+    </div>
+</div>
+
+<!-- ---------- the turn-in page: after problem 21, or any time from the Turn in button ---------- -->
+<div class="turnin off" id="turnin" role="dialog" aria-labelledby="ti-title">
+    <div class="ti-inner">
+        <h2 id="ti-title">All 21 done</h2>
+        <p class="ti-sub" id="ti-sub">Enter your period and name to turn in your work.</p>
+
+        <iframe name="hidden_iframe" id="hidden_iframe" style="display:none"
+                onload="if(window.onHiddenFrameLoad)onHiddenFrameLoad()"></iframe>
+
+        <form action="https://docs.google.com/forms/d/e/1FAIpQLSe4_Gnrq1zyrttA3lSgrVBtMkaVaoMim31ByzoH-orxmfDB2A/formResponse"
+              method="POST" target="hidden_iframe" id="gform">
+            <div class="ti-warn">
+                Read the box labels before you type. Your <b>LAST name</b> goes in the
+                <b>Last name</b> box and your <b>FIRST name</b> goes in the <b>First name</b> box.
+                Swapped names cannot be matched to the roster and count as missing.
+            </div>
+            <div class="ti-field">
+                <label for="studentPeriod"><span class="ti-num">1</span>Period</label>
+                <input type="number" id="studentPeriod" placeholder="e.g. 3" min="1" max="10" required>
+            </div>
+            <div class="ti-field">
+                <label for="lastName"><span class="ti-num">2</span>LAST name
+                    <em>&mdash; your family name, the one the roster is alphabetized by</em></label>
+                <input type="text" id="lastName" placeholder="Rodriguez" autocomplete="family-name" required>
+            </div>
+            <div class="ti-field">
+                <label for="firstName"><span class="ti-num">3</span>FIRST name
+                    <em>&mdash; the name your teacher calls you by</em></label>
+                <input type="text" id="firstName" placeholder="Maria" autocomplete="given-name" required>
+            </div>
+            <div class="ti-check" id="nameCheck"></div>
+            <input type="hidden" id="studentName" name="entry.1899284808" value="">
+            <input type="hidden" id="formScore" name="entry.1974610095" value="">
+            <button type="submit" class="check-btn" id="ti-submit">Submit Results</button>
+        </form>
+
+        <div class="ti-feedback" id="ti-feedback"></div>
+        <div class="ti-after">
+            <span id="ti-after-lab">Want more practice?</span>
+            <button class="ti-ghost" type="button" id="ti-back">Keep practicing</button>
+        </div>
+
+        <!-- the work goes under the form, so the name boxes are the first thing on the page -->
+        <h3>Your work</h3>
+        <div class="ti-recap" id="ti-recap"></div>
+        <div id="ti-log"></div>
+    </div>
+</div>
+
+<script id="core">
+/* ============================================================
+   THE DRILL  —  Negative Exponents
+   Problems are made fresh each time, in the same shapes as the
+   handout: plain powers, a negative in front, a negative base,
+   1 or a whole number over a power, one power over another, and
+   fractions raised to a negative power.
+
+   An item is either
+     pw(base, exp)          a power              e.g. pw(9,-2)  -> 9^-2
+     fr(top, bottom, exp)   a fraction to a power e.g. fr(3,5,-2) -> (3/5)^-2
+   A group is G([numerator items], [denominator items], {neg, op}).
+   ============================================================ */
+const pw = (b, e) => ({ k: 'p', b, e });
+const fr = (n, d, e) => ({ k: 'f', n, d, e });
+const G  = (num, den, o = {}) => ({ num, den, neg: !!o.neg, op: o.op || null });
+
+const rint = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
+const pick = list => list[Math.floor(Math.random() * list.length)];
+const coin = (odds = 0.5) => Math.random() < odds;
+
+// each base with the largest exponent that keeps the answer a readable size
+const POWERS = [[2, 6], [3, 4], [4, 4], [5, 4], [6, 3], [7, 3], [8, 3], [9, 3], [10, 4]];
+const somePower = (lo = 2) => { const [b, m] = pick(POWERS); return [b, rint(lo, m)]; };
+
+const FAMILIES = [
+    // 3^-4
+    { n: 1, w: 4, make: () => { const [b, e] = somePower(); return [G([pw(b, -e)], [])]; } },
+    // 3^4, no negative
+    // not in the regular decks: exactly one is added to the 21 that get turned in (see dealDeck)
+    { n: 0, w: 0, make: () => { const [b, m] = pick(POWERS); return [G([pw(b, rint(2, Math.min(m, 4)))], [])]; } },
+    // -4^-2
+    { n: 1, w: 1.5, make: () => [G([pw(rint(2, 6), -rint(2, 3))], [], { neg: true })] },
+    // (-4)^-2
+    { n: 1, w: 1.5, make: () => { const b = rint(2, 5); return [G([pw(-b, -rint(2, b === 2 ? 5 : 3))], [])]; } },
+    // 1 / 4^-2
+    { n: 1, w: 2, make: () => { const [b, e] = somePower(); return [G([], [pw(b, -e)])]; } },
+    // 2 / 3^-3
+    { n: 1, w: 1.5, make: () => {
+        let a, b, e;
+        do { a = rint(2, 6); b = rint(2, 7); e = rint(2, 3); } while (a * Math.pow(b, e) > 2500);
+        return [G([pw(a, 1)], [pw(b, -e)])];
+    } },
+    // 5^-3 / 25^-2, or two unrelated bases
+    { n: 1, w: 1.5, make: () => {
+        if (coin(0.6)) {
+            const [a, c, k] = pick([[2, 4, 2], [2, 8, 3], [3, 9, 2], [5, 25, 2]]);
+            const m = rint(1, a === 2 ? 5 : 3), n = rint(1, 2);
+            if (m === k * n) return null;                       // would just be 1
+            const small = pw(a, -m), big = pw(c, -n);
+            return coin() ? [G([small], [big])] : [G([big], [small])];
+        }
+        let a, b, m, n;
+        do { a = rint(2, 7); b = rint(2, 7); m = rint(1, 3); n = rint(1, 3); }
+        while (a === b || (m === 1 && n === 1) || Math.pow(a, m) > 350 || Math.pow(b, n) > 350);
+        return [G([pw(a, -m)], [pw(b, -n)])];
+    } },
+    // (3/5)^-2, (2/-5)^-2, (-4/3)^-2
+    // always exactly 2 in every deck, so 4 in the 21 that get turned in
+    { n: 2, w: 0, make: () => {
+        let p, q, e;
+        do { p = rint(1, 9); q = rint(1, 9); e = rint(2, 3); }
+        while (p === q || q === 1 || gcd(p, q) !== 1 || (e === 3 && Math.max(p, q) > 6));
+        if (coin(0.3)) { if (coin()) p = -p; else q = -q; }
+        return [G([fr(p, q, -e)], [])];
+    } }
+];
+
+/* Problems are dealt from a deck of ten. Each kind goes in n times (fractions to
+   a negative power twice, powers with no negative not at all, the rest once),
+   and the deck is topped up to ten with random extras chosen by weight w. It is
+   shuffled so the same kind never comes twice in a row.
+
+   The 21 problems that get turned in are the first two decks, and one of those
+   two (chosen at random, so it can land anywhere in the 21) also gets the single
+   problem with no negative exponent, making it eleven cards. */
+const NO_NEG = 1;                                  // the index of that kind in FAMILIES
+let deck = [];
+let decksDealt = 0;
+const noNegDeck = Math.random() < 0.5 ? 0 : 1;
+
+function dealDeck(lastFam) {
+    const cards = [];
+    FAMILIES.forEach((f, i) => { for (let k = 0; k < f.n; k++) cards.push(i); });
+    const total = FAMILIES.reduce((t, f) => t + f.w, 0);
+    while (cards.length < 10) {
+        let r = Math.random() * total;
+        cards.push(FAMILIES.findIndex(f => (r -= f.w) < 0));
+    }
+    if (decksDealt === noNegDeck) cards.push(NO_NEG);
+    decksDealt++;
+    for (;;) {
+        for (let k = cards.length - 1; k > 0; k--) {
+            const m = Math.floor(Math.random() * (k + 1));
+            [cards[k], cards[m]] = [cards[m], cards[k]];
+        }
+        const ok = cards.every((c, k) => c !== (k ? cards[k - 1] : lastFam));
+        if (ok) return cards;
+    }
+}
+
+// the next kind of problem off the deck, dealing a fresh deck when it runs out
+function nextFam(lastFam = -1) {
+    if (!deck.length) deck = dealDeck(lastFam);
+    return deck.shift();
+}
+
+// fresh numbers for one kind of problem
+function makeProblem(fam) {
+    for (;;) {
+        const groups = FAMILIES[fam].make();
+        if (groups) return { groups, fam };
+    }
+}
+
+/* A single whole-number power with a negative exponent — like 3^-4 — is
+   the same as starting at 1 and dividing by the base over and over:
+   1 ÷ 3 ÷ 3 ÷ 3 ÷ 3. Returns that chain as markup, or null for any other shape. */
+function divisionChain(prob) {
+    if (prob.groups.length !== 1) return null;
+    const g = prob.groups[0];
+    if (g.den.length || g.num.length !== 1) return null;
+    const it = g.num[0];
+    if (it.k !== 'p' || it.e >= 0) return null;
+    const b = it.b < 0 ? `(&minus;${-it.b})` : `${it.b}`;
+    const chain = '1' + ` &divide; ${b}`.repeat(-it.e);
+    return g.neg ? `&minus;(${chain})` : chain;
+}
+
+/* ============================================================
+   Where every item ends up once the negatives have moved
+   ------------------------------------------------------------
+   A power with a negative exponent crosses the main fraction bar.
+   A fraction with a negative exponent turns upside down in place.
+   Either way the exponent comes out positive.
+   ============================================================ */
+function plan(g) {
+    const num = [], den = [];
+    g.num.forEach((it, ii) => {
+        if (it.k === 'p') {
+            if (it.e < 0) den.push({ post: pw(it.b, -it.e), src: { kind: 'pow', from: 'num', ii } });
+            else          num.push({ post: it, src: null });
+        } else {
+            if (it.e < 0) num.push({ post: fr(it.d, it.n, -it.e), src: { kind: 'frac', from: 'num', ii } });
+            else          num.push({ post: it, src: null });
+        }
+    });
+    g.den.forEach((it, ii) => {
+        if (it.k === 'p') {
+            if (it.e < 0) num.push({ post: pw(it.b, -it.e), src: { kind: 'pow', from: 'den', ii } });
+            else          den.push({ post: it, src: null });
+        } else {
+            if (it.e < 0) den.push({ post: fr(it.d, it.n, -it.e), src: { kind: 'frac', from: 'den', ii } });
+            else          den.push({ post: it, src: null });
+        }
+    });
+    return { num, den };
+}
+
+/* Write every power out as repeated multiplication, all over one bar.
+   A 1 that the student put there — from a zero power, or from a base of 1 —
+   is flagged so it survives the tidying up below. */
+function emit(post, T, B) {
+    if (post.k === 'p') {
+        if (post.e === 0) T.push({ v: 1, keep: true });          // anything^0 is 1
+        else for (let k = 0; k < post.e; k++) T.push({ v: post.b, keep: post.b === 1 });
+    } else {
+        for (let k = 0; k < post.e; k++) T.push({ v: post.n });
+        for (let k = 0; k < post.e; k++) B.push({ v: post.d });
+    }
+}
+
+// stray 1s beside real factors go away; a row of nothing but 1s is written out in full
+function tidy(list) {
+    const real = list.filter(x => x.v !== 1 || x.keep);
+    return real.length ? real : list;
+}
+
+function expandGroup(g) {
+    const pl = plan(g), top = [], bot = [];
+    pl.num.forEach(({ post }) => emit(post, top, bot));
+    pl.den.forEach(({ post }) => emit(post, bot, top));
+    return { top: tidy(top), bot: tidy(bot) };
+}
+
+const product = list => list.reduce((p, x) => p * x.v, 1);
+
+/* ============================================================
+   What actually cancels
+   ------------------------------------------------------------
+   A cross-out is legal when the factors struck on top are worth
+   the same as the factors struck on the bottom, so we look for
+   the largest value that both sides can build. That is honest
+   even when the bases differ, e.g. 25 on top against 5 · 5 below.
+   ============================================================ */
+function subsetProducts(list) {
+    const m = new Map(), n = list.length;
+    for (let mask = 0; mask < (1 << n); mask++) {
+        let p = 1;
+        for (let k = 0; k < n; k++) if (mask >> k & 1) p *= list[k].v;
+        if (!m.has(p)) m.set(p, mask);
+    }
+    return m;
+}
+
+function cancelPlan(top, bot) {
+    if (top.length > 14 || bot.length > 14) return { p: 1, topMask: 0, botMask: 0 };
+    const mt = subsetProducts(top), mb = subsetProducts(bot);
+    let best = 1, tm = 0, bm = 0;
+    for (const [p, mask] of mt) {
+        if (p !== 1 && mb.has(p) && Math.abs(p) > Math.abs(best)) { best = p; tm = mask; bm = mb.get(p); }
+    }
+    return { p: best, topMask: tm, botMask: bm };
+}
+
+const maskCount = m => { let c = 0; while (m) { c += m & 1; m >>= 1; } return c; };
+
+/* ---------- exact fraction arithmetic for the final answer ---------- */
+const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) { [a, b] = [b, a % b]; } return a || 1; };
+function reduce(n, d) { const g = gcd(n, d); n /= g; d /= g; if (d < 0) { n = -n; d = -d; } return { n, d }; }
+function addFrac(a, b) { return reduce(a.n * b.d + b.n * a.d, a.d * b.d); }
+
+/* ============================================================
+   Everything the drill needs to know about one problem
+   ============================================================ */
+function analyse(prob) {
+    const groups = prob.groups.map(g => {
+        const { top, bot } = expandGroup(g);
+        const cut = cancelPlan(top, bot);
+        const remTop = top.filter((_, k) => !(cut.topMask >> k & 1));
+        const remBot = bot.filter((_, k) => !(cut.botMask >> k & 1));
+        const sign = g.neg ? -1 : 1;
+        return {
+            g, top, bot, cut,
+            cutTop: maskCount(cut.topMask),
+            cutBot: maskCount(cut.botMask),
+            remTopVal: product(remTop) * sign,
+            remBotVal: product(remBot),
+            value: reduce(product(top) * sign, product(bot))
+        };
+    });
+
+    const answer = groups.reduce((acc, gi) => addFrac(acc, gi.value), { n: 0, d: 1 });
+    const hasNeg = prob.groups.some(g =>
+        g.num.some(i => i.e < 0) || g.den.some(i => i.e < 0));
+    const cancels = groups.some(gi => gi.cut.p !== 1);
+    const factors = groups.reduce((s, gi) => s + gi.top.length + gi.bot.length, 0);
+
+    return { groups, answer, hasNeg, cancels, factors };
+}
+
+if (typeof module !== 'undefined') module.exports = { makeProblem, nextFam, analyse, plan, expandGroup, divisionChain };
+</script>
+
+<script>
+/* ============================================================
+   State
+   ============================================================ */
+let P = null;          // the current problem
+let A = null;          // its analysis
+let count = 0;         // how many problems have been served
+/* The problems from Negative Exponents Day Three, in the order of the slides */
+const SET = [
+    { label: 'Warm-up 1', walk: 'w1', groups: [G([pw(2, -5)], [])] },
+    { label: 'Warm-up 2', walk: 'w2', groups: [G([], [pw(3, -2)])] },
+    { label: 'A', groups: [G([pw(3, -4)], [])] },
+    { label: 'B', groups: [G([pw(3, 4)], [])] },
+    { label: 'C', groups: [G([pw(9, -2)], [])] },
+    { label: 'D', groups: [G([pw(5, -3)], [])] },
+    { label: 'E', groups: [G([pw(4, -2)], [], { neg: true })] },
+    { label: 'F', groups: [G([pw(-4, -2)], [])] },
+    { label: 'G', groups: [G([], [pw(4, -2)])] },
+    { label: 'H', groups: [G([pw(2, 1)], [pw(3, -3)])] },
+    { label: 'I', groups: [G([], [pw(2, -5)])] },
+    { label: 'J', groups: [G([pw(5, -3)], [pw(25, -2)])] },
+    { label: 'L', groups: [G([pw(8, -2)], [])] },
+    { label: 'M', groups: [G([pw(10, -4)], [])] },
+    { label: 'N', groups: [G([], [pw(7, -3)])] },
+    { label: 'O', groups: [G([], [pw(5, -4)])] },
+    { label: 'P', groups: [G([pw(2, -2)], [], { neg: true })] },
+    { label: 'Q', groups: [G([pw(4, 1)], [pw(7, -3)])] },
+    { label: 'Fractions 1', groups: [G([fr(3, 5, -2)], [])] },
+    { label: 'Fractions 2', groups: [G([fr(1, 4, -3)], [])] },
+    { label: 'Fractions 3', groups: [G([fr(2, -5, -2)], [])] }
+];
+const GOAL = SET.length;   // the work that gets turned in (21)
+const DRILL_NAME = 'Negative Exponents Day Three';
+let records = [];      // every finished problem: what it was, the answer, and whether it went clean
+let flubbed = false;   // a wrong answer or a wrong drop on the problem in front of the student
+let submitted = false, submittedAt = 0;
+let recent = [];       // the last problems served, so numbers do not come back soon
+let lastFam = -1;
+let phase = 'flip';    // flip -> expand -> cancel -> locked -> answer -> done
+let drag = null;
+let timers = [];
+
+const $ = id => document.getElementById(id);
+const later = (fn, ms) => { timers.push(setTimeout(fn, ms)); };
+
+/* ============================================================
+   Markup helpers
+   ============================================================ */
+const frac = (n, d) => `<span class="frac"><span class="num">${n}</span><span class="denom">${d}</span></span>`;
+
+// the same thing over a faint bar and a faint 1; starts collapsed so it can grow in
+const overOne = n =>
+    `<span class="frac scaffold dissolved"><span class="num">${n}</span><span class="denom">1</span></span>`;
+const baseHtml = b => b < 0 ? `(&minus;${-b})` : `${b}`;
+const valHtml  = v => v < 0 ? `(&minus;${-v})` : `${v}`;
+
+function supHtml(e) {
+    if (e === 1) return '';
+    return e < 0
+        ? `<sup><span class="t2">&minus;${-e}</span></sup>`
+        : `<sup>${e}</sup>`;
+}
+
+// a power, plain
+const powHtml = it => `${baseHtml(it.b)}${supHtml(it.e)}`;
+
+// a fraction raised to a power, plain
+const fracPowHtml = it =>
+    `<span class="grp"><span class="paren">(</span>${frac(baseHtml(it.n), baseHtml(it.d))}<span class="paren">)</span>${supHtml(it.e)}</span>`;
+
+const itemHtml = it => it.k === 'p' ? powHtml(it) : fracPowHtml(it);
+
+/* ---------- the starting form, with the movable pieces marked ---------- */
+function srcHtml(id, target, kind, inner, label) {
+    return `<span class="term src" id="${id}" data-target="${target}" data-kind="${kind}"
+                  tabindex="0" role="button" aria-label="${label}">${inner}</span>`;
+}
+
+function startItemHtml(it, gi, side, ii, live) {
+    const stem = `${gi}-${side}-${ii}`;
+    if (it.k === 'p') {
+        if (!live || it.e >= 0) return powHtml(it);
+        const target = `slot-${stem}`;
+        const inner = `<span class="t1">${baseHtml(it.b)}</span><sup class="t2">&minus;${-it.e}</sup>`;
+        return srcHtml(`s-${stem}`, target, 'pow', inner,
+            `${it.b} to the negative ${-it.e}. Press Enter to move it across the bar.`);
+    }
+    if (!live || it.e >= 0) return fracPowHtml(it);
+    const topSrc = srcHtml(`s-${stem}-n`, `slot-${stem}-d`, 'fbase',
+        `<span class="t1">${baseHtml(it.n)}</span>`,
+        `${it.n}, the top of the fraction. Press Enter to send it to the bottom.`);
+    const botSrc = srcHtml(`s-${stem}-d`, `slot-${stem}-n`, 'fbase',
+        `<span class="t1">${baseHtml(it.d)}</span>`,
+        `${it.d}, the bottom of the fraction. Press Enter to send it to the top.`);
+    return `<span class="grp"><span class="paren">(</span>${frac(topSrc, botSrc)}<span class="paren">)</span>`
+         + `<sup class="t2">&minus;${-it.e}</sup></span>`;
+}
+
+function zoneHtml(items, gi, side, live) {
+    if (!items.length) return '';
+    return items.map((it, ii) => startItemHtml(it, gi, side, ii, live))
+                .join('<span class="mul">&middot;</span>');
+}
+
+function startHtml(live) {
+    return P.groups.map((g, gi) => {
+        let h = g.op ? `<span class="op">${g.op}</span>` : '';
+        h += '<span class="grp">';
+        if (g.neg) h += '<span class="neg">&minus;</span>';
+        const n = zoneHtml(g.num, gi, 'num', live);
+        const d = zoneHtml(g.den, gi, 'den', live);
+        // a power that has to fall through the bar needs a bar to fall through,
+        // so give it one: the expression written over a faint 1
+        const sinks = live && !g.den.length && g.num.some(it => it.k === 'p' && it.e < 0);
+        if (g.den.length) h += frac(n || '1', d);
+        else if (sinks)   h += overOne(n);
+        else              h += n;
+        h += '</span>';
+        return h;
+    }).join('');
+}
+
+/* ---------- the rewritten form, with empty slots to drop into ---------- */
+function targetItemHtml(entry, gi) {
+    if (!entry.src) return itemHtml(entry.post);
+    const stem = `${gi}-${entry.src.from}-${entry.src.ii}`;
+    if (entry.src.kind === 'pow') {
+        return `<span class="drop-slot" id="slot-${stem}" data-stem="${stem}">?</span>`;
+    }
+    const e = entry.post.e;
+    return `<span class="grp" id="blk-${stem}"><span class="paren">(</span>`
+        + frac(`<span class="drop-slot" id="slot-${stem}-n" data-blk="${stem}">?</span>`,
+               `<span class="drop-slot" id="slot-${stem}-d" data-blk="${stem}">?</span>`)
+        + `<span class="paren">)</span>`
+        + `<sup><span class="exp-sign t2" id="sgn-${stem}">&minus;</span>`
+        + `<span class="exp-num t2" id="exn-${stem}">${e}</span></sup></span>`;
+}
+
+function targetZoneHtml(entries, gi) {
+    if (!entries.length) return '';
+    return entries.map(en => targetItemHtml(en, gi)).join('<span class="mul">&middot;</span>');
+}
+
+function flipHtml() {
+    return P.groups.map((g, gi) => {
+        const pl = plan(g);
+        let h = g.op ? `<span class="op">${g.op}</span>` : '';
+        h += '<span class="grp">';
+        if (g.neg) h += '<span class="neg">&minus;</span>';
+        const n = targetZoneHtml(pl.num, gi), d = targetZoneHtml(pl.den, gi);
+        // a power that crossed the bar upwards needs a bar to have crossed,
+        // even when the bottom comes out empty — so draw a faint one over a faint 1
+        const rose = pl.num.some(en => en.src && en.src.kind === 'pow');
+        if (d) h += frac(n || '1', d);
+        else if (rose) h += `<span class="frac scaffold"><span class="num">${n}</span>`
+                          + `<span class="denom">1</span></span>`;
+        else h += n;
+        h += '</span>';
+        return h;
+    }).join('');
+}
+
+/* ---------- the expanded form, one clickable factor at a time ---------- */
+function factorRow(gi, side, list) {
+    if (!list.length) return '1';
+    let html = '';
+    list.forEach((f, k) => {
+        if (k > 0) html += `<span class="dot" data-g="${gi}" data-side="${side}" data-k="${k - 1}">&middot;</span>`;
+        html += `<span class="fact" data-g="${gi}" data-side="${side}" data-k="${k}">${valHtml(f.v)}</span>`;
+    });
+    return html;
+}
+
+function expandHtml() {
+    return A.groups.map((gi_, gi) => {
+        let h = gi_.g.op ? `<span class="op">${gi_.g.op}</span>` : '';
+        h += '<span class="grp">';
+        if (gi_.g.neg) h += '<span class="neg">&minus;</span>';
+        h += gi_.bot.length
+            ? frac(factorRow(gi, 'num', gi_.top), factorRow(gi, 'den', gi_.bot))
+            : factorRow(gi, 'num', gi_.top);
+        h += '</span>';
+        return h;
+    }).join('');
+}
+
+function leftHtml() {
+    return A.groups.map(gi_ => {
+        let h = gi_.g.op ? `<span class="op">${gi_.g.op}</span>` : '';
+        const neg = gi_.remTopVal < 0;
+        const top = Math.abs(gi_.remTopVal);
+        h += '<span class="grp">';
+        if (neg) h += '<span class="neg">&minus;</span>';
+        h += gi_.remBotVal === 1 ? `${top}` : frac(top, gi_.remBotVal);
+        h += '</span>';
+        return h;
+    }).join('');
+}
+
+function answerHtml() {
+    const { n, d } = A.answer;
+    const body = d === 1
+        ? `<span class="final">${Math.abs(n)}</span>`
+        : frac(`<span class="final">${Math.abs(n)}</span>`, `<span class="final">${d}</span>`);
+    return (n < 0 ? '<span class="neg final">&minus;</span>' : '') + body;
+}
+
+/* ============================================================
+   Loading a problem
+   ============================================================ */
+function sizeClass(step, count) {
+    step.classList.remove('tight', 'snug');
+    if (count > 11) step.classList.add('tight');
+    else if (count > 7) step.classList.add('snug');
+}
+
+function loadProblem() {
+    timers.forEach(clearTimeout);
+    timers = [];
+    let key, tries = 0;
+    let label = '', walk = null;
+    if (count < SET.length) {
+        // the 21 turned-in problems come straight from the PowerPoint, in slide order
+        const s = SET[count];
+        P = { groups: s.groups, fam: -1 };
+        label = s.label;
+        walk = s.walk || null;
+        key = JSON.stringify(P.groups);
+    } else {
+        const fam = nextFam(lastFam);
+        do { P = makeProblem(fam); key = JSON.stringify(P.groups); }
+        while (recent.includes(key) && ++tries < 200);
+    }
+    recent.push(key);
+    if (recent.length > 40) recent.shift();
+    lastFam = P.fam;
+    A = analyse(P);
+    count++;
+
+    flubbed = false;
+    $('problem-title').textContent = count <= GOAL
+        ? `Problem ${count} of ${GOAL}` + (label ? ` \u00b7 ${label}` : '')
+        : `Problem ${count} \u00b7 extra practice`;
+
+    ['eq-1', 'step-flip', 'eq-2', 'step-expand',
+     'eq-3', 'step-left', 'eq-4', 'step-ans', 'eq-5', 'step-mixed'].forEach(id => $(id).classList.add('off'));
+    ['step-flip', 'step-expand', 'step-left', 'step-ans', 'step-mixed']
+        .forEach(id => { $(id).innerHTML = ''; $(id).classList.remove('tight', 'snug'); });
+
+    say('', '');
+    setHint('');
+    $('act-btn').classList.add('off');
+    $('check-btn').classList.add('off');
+    $('next-btn').classList.add('off');
+
+    $('step-orig').innerHTML = startHtml(true);
+    endWalk();
+    if (walk) startWalk(WALKS[walk], () => riseOntoBar($('step-orig')));
+    else riseOntoBar($('step-orig'));
+}
+
+/* ============================================================
+   Why does it work? — the PowerPoint's multiply-by-1 proofs,
+   shown one step at a time before problems 1 and 2
+   ============================================================ */
+const W = {
+    b:   x => `<span class="t1">${x}</span>`,
+    pw:  (b, e) => `<span class="grp"><span class="t1">${b}</span><sup class="${String(e).startsWith('\u2212') ? 't2' : 'w-pos'}">${e}</sup></span>`,
+    sup: (b, html) => `<span class="grp"><span class="t1">${b}</span><sup>${html}</sup></span>`,
+    fr:  (t, d) => `<span class="frac"><span class="num">${t}</span><span class="denom">${d}</span></span>`,
+    one: '<span class="w-one">1</span>',
+    dot: '<span class="mul">\u00b7</span>',
+    eq:  '<span class="eq">=</span>',
+    ask: '<span class="eq w-ask">=</span><span class="w-ask" style="font-size:0.6em">?</span>',
+    new: html => `<span class="pop" style="display:inline-flex;align-items:center;gap:0.18em">${html}</span>`
+};
+const wRow   = (html, cls = '') => `<div class="w-row ${cls}">${html}</div>`;
+const wTitle = t => `<div class="w-title">${t}</div>`;
+const wSo    = (l, r) => wRow(`<span class="w-word">SO</span>${l}${W.eq}${r}`, 'w-so pop');
+
+const WALKS = (() => {
+    const { pw, sup, fr, one, dot, eq, ask } = W, nw = W.new;
+    const plus = '<span class="w-plus">+</span>';
+
+    // 2^-5 = 1/2^5
+    const a  = pw(2, '\u22125'), a5 = pw(2, 5), a0 = pw(2, 0);
+    const one5 = fr(a5, a5);
+    const w1 = [
+        { cap: 'Why is a negative exponent the same as 1 over the positive power?',
+          html: wTitle('WHY DOES') + wRow(a + ask + fr(one, a5)) },
+        { cap: 'Multiply by 1. Multiplying by 1 never changes the value.',
+          html: wRow(a + nw(dot + one)) },
+        { cap: 'Any number over itself is 1, so we can write 1 as 2\u2075 over 2\u2075.',
+          html: wRow(a + dot + nw(one5)) + wRow(one + eq + one5, 'w-note pop') },
+        { cap: 'Multiply the tops together. The bottom stays 2\u2075.',
+          html: wRow(a + dot + one5 + nw(eq + fr(a + dot + a5, a5))) + wRow(one + eq + one5, 'w-note') },
+        { cap: 'Same base on top, so add the exponents: \u22125 + 5 = 0.',
+          html: wRow(a + dot + one5 + eq + nw(fr(sup(2, '\u22125 ' + plus + ' 5'), a5) + eq + fr(a0, a5))) + wRow(one + eq + one5, 'w-note') },
+        { cap: 'Anything to the zero power is 1, so 2\u2070 = 1.',
+          html: wRow(a + dot + one5 + eq + fr(a0, a5) + nw(eq + fr(one, a5))) + wRow(one + eq + one5, 'w-note') },
+        { cap: 'A negative exponent on top moves to the bottom and becomes positive.',
+          html: wRow(a + dot + one + eq + fr(a0, a5) + eq + fr(one, a5)) + wSo(a, fr(one, a5)) }
+    ];
+
+    // 1/3^-2 = 3^2
+    const b = pw(3, '\u22122'), b2 = pw(3, 2), b0 = pw(3, 0);
+    const start = fr(one, b), one2 = fr(b2, b2);
+    const w2 = [
+        { cap: 'Why does a negative exponent on the bottom end up positive on top?',
+          html: wTitle('WHY DOES') + wRow(start + ask + b2) },
+        { cap: 'Multiply by 1. Multiplying by 1 never changes the value.',
+          html: wRow(start + nw(dot + one)) },
+        { cap: 'Any number over itself is 1, so we can write 1 as 3\u00b2 over 3\u00b2.',
+          html: wRow(start + dot + nw(one2)) + wRow(one + eq + one2, 'w-note pop') },
+        { cap: 'Multiply the tops together and the bottoms together.',
+          html: wRow(start + dot + one2 + nw(eq + fr(one + dot + b2, b + dot + b2))) + wRow(one + eq + one2, 'w-note') },
+        { cap: 'Same base on the bottom, so add the exponents: \u22122 + 2 = 0.',
+          html: wRow(start + dot + one2 + eq + nw(fr(b2, sup(3, '\u22122 ' + plus + ' 2')) + eq + fr(b2, b0))) + wRow(one + eq + one2, 'w-note') },
+        { cap: 'Anything to the zero power is 1, so 3\u2070 = 1.',
+          html: wRow(start + dot + one2 + eq + fr(b2, b0) + nw(eq + fr(b2, one))) + wRow(one + eq + one2, 'w-note') },
+        { cap: 'Anything over 1 is just itself.',
+          html: wRow(start + dot + one2 + eq + fr(b2, b0) + eq + fr(b2, one) + nw(eq + b2)) + wRow(one + eq + one2, 'w-note') },
+        { cap: 'A negative exponent on the bottom moves to the top and becomes positive.',
+          html: wRow(start + dot + one + eq + fr(b2, b0) + eq + fr(b2, one) + eq + b2) + wSo(start, b2) }
+    ];
+    return { w1, w2 };
+})();
+
+let walkState = null;
+
+function startWalk(steps, then) {
+    phase = 'walk';
+    walkState = { steps, i: 0, then };
+    $('chain').classList.add('off');
+    $('walk').classList.remove('off');
+    $('walk-nav').classList.remove('off');
+    setHint('Why does it work?');
+    showWalkStep();
+}
+
+function showWalkStep() {
+    const { steps, i } = walkState;
+    $('walk').innerHTML = steps[i].html;
+    say(steps[i].cap, 'walk-cap');
+    $('walk-back').disabled = i === 0;
+    $('walk-next').innerHTML = i === steps.length - 1 ? 'Now you try it &rarr;' : 'Next step &rarr;';
+}
+
+function endWalk() {
+    walkState = null;
+    $('walk').classList.add('off');
+    $('walk').innerHTML = '';
+    $('walk-nav').classList.add('off');
+    $('chain').classList.remove('off');
+}
+
+$('walk-next').addEventListener('click', () => {
+    if (!walkState) return;
+    if (walkState.i < walkState.steps.length - 1) { walkState.i++; showWalkStep(); return; }
+    const then = walkState.then;
+    endWalk();
+    say('', '');
+    then();
+});
+$('walk-back').addEventListener('click', () => {
+    if (!walkState || walkState.i === 0) return;
+    walkState.i--;
+    showWalkStep();
+});
+
+// The starting form is drawn flat, exactly as the handout prints it. If it is
+// really a whole number, let it settle onto a faint bar over a faint 1 first,
+// so the student sees where the negative power is about to fall to.
+function riseOntoBar(root) {
+    const bars = [...root.querySelectorAll('.frac.scaffold.dissolved')];
+    if (!bars.length) { beginAfterStart(); return; }
+    phase = 'wait';
+    setHint('');
+    // the problem sits alone for three seconds before the bar and the 1 grow in under it
+    const PAUSE = 3000;
+    later(() => {
+        setHint('Any expression can be written over 1.');
+        bars.forEach(f => f.classList.remove('dissolved'));
+    }, PAUSE);
+    later(beginAfterStart, PAUSE + 1100);
+}
+
+// once the starting form is on screen, either drag the negatives across or,
+// if there are none, go straight to writing the powers out
+function beginAfterStart() {
+    if (A.hasNeg) {
+        phase = 'flip';
+        $('eq-1').classList.remove('off');
+        const step = $('step-flip');
+        step.innerHTML = flipHtml();
+        step.classList.remove('off');
+        setHint('Move every negative exponent so it turns positive.');
+        wireSources();
+    } else {
+        phase = 'expand';
+        setHint('Nothing here is negative — this one just gets written out.');
+        say('No negative exponents in this one.', 'correct');
+        later(doExpand, 1600);
+    }
+}
+
+function srcRoot() {
+    return $('step-orig');
+}
+
+function wireSources() {
+    srcRoot().querySelectorAll('.term.src').forEach(t => {
+        t.addEventListener('pointerdown', onPointerDown);
+        t.addEventListener('keydown', onTermKey);
+    });
+}
+
+function setHint(text, lit) {
+    const h = $('hint-text');
+    h.textContent = text;
+    h.classList.toggle('lit', !!lit);
+}
+function say(msg, cls) { const f = $('feedback'); f.textContent = msg; f.className = `feedback ${cls}`; }
+
+/* ============================================================
+   Step 1 — moving the negatives
+   ============================================================ */
+const allSlots = () => [...$('step-flip').querySelectorAll('.drop-slot')];
+const liveSources = () => [...srcRoot().querySelectorAll('.term.src')].filter(t => t.dataset.used !== '1');
+
+function hitSlot(x, y) {
+    return allSlots().find(s => {
+        if (s.classList.contains('filled')) return false;
+        const r = s.getBoundingClientRect();
+        return x >= r.left - 24 && x <= r.right + 24 && y >= r.top - 24 && y <= r.bottom + 24;
+    }) || null;
+}
+
+function onPointerDown(e) {
+    const src = e.currentTarget;
+    if (phase !== 'flip' || src.dataset.used === '1') return;
+    e.preventDefault();
+    src.focus({ preventScroll: true });
+    if ($('feedback').classList.contains('nudge')) say('', '');
+
+    const rect = src.getBoundingClientRect();
+    const ghost = src.cloneNode(true);
+    ghost.removeAttribute('id');
+    ghost.classList.add('ghost');
+    ghost.style.left = rect.left + 'px';
+    ghost.style.top = rect.top + 'px';
+    ghost.style.width = rect.width + 'px';
+    ghost.style.fontSize = getComputedStyle(src).fontSize;
+    document.body.appendChild(ghost);
+
+    drag = { src, ghost, dx: e.clientX - rect.left, dy: e.clientY - rect.top, moved: false };
+    allSlots().forEach(s => { if (!s.classList.contains('filled')) s.classList.add('armed'); });
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+}
+
+function onPointerMove(e) {
+    if (!drag) return;
+    drag.moved = true;
+    drag.ghost.style.left = (e.clientX - drag.dx) + 'px';
+    drag.ghost.style.top = (e.clientY - drag.dy) + 'px';
+    const over = hitSlot(e.clientX, e.clientY);
+    allSlots().forEach(s => s.classList.toggle('eligible', s === over));
+}
+
+function onPointerUp(e) {
+    if (!drag) return;
+    const { src, ghost, moved } = drag;
+    const rect = ghost.getBoundingClientRect();
+    const over = hitSlot(e.clientX, e.clientY);
+
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', onPointerUp);
+    window.removeEventListener('pointercancel', onPointerUp);
+    allSlots().forEach(s => s.classList.remove('armed', 'eligible'));
+    ghost.remove();
+    drag = null;
+
+    if (!moved || !over) return;
+
+    if (over.id === src.dataset.target) placeTerm(src, rect);
+    else bump(src, src.dataset.kind === 'fbase'
+        ? 'The top and the bottom trade places — try the other spot.'
+        : 'Not that spot. A negative exponent crosses the bar to the other side.');
+}
+
+function bump(el, msg) {
+    flubbed = true;
+    el.classList.add('shake');
+    later(() => el.classList.remove('shake'), 400);
+    say(msg, 'nudge');
+}
+
+function onTermKey(e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    const src = e.currentTarget;
+    if (phase !== 'flip' || src.dataset.used === '1') return;
+    placeTerm(src, src.getBoundingClientRect());
+}
+
+function slideFrom(el, fromRect, ms) {
+    const now = el.getBoundingClientRect();
+    const dx = fromRect.left - now.left, dy = fromRect.top - now.top;
+    if (!dx && !dy) return;
+    el.style.transition = 'none';
+    el.style.transform = `translate(${dx}px, ${dy}px)`;
+    requestAnimationFrame(() => {
+        el.style.transition = `transform ${ms}ms cubic-bezier(0.35, 0, 0.2, 1)`;
+        el.style.transform = 'translate(0, 0)';
+    });
+}
+
+function placeTerm(src, fromRect) {
+    const slot = $(src.dataset.target);
+    const isPow = src.dataset.kind === 'pow';
+    slot.innerHTML = `<span class="term landed">${src.innerHTML}</span>`;
+    slot.classList.add('filled');
+
+    const landed = slot.querySelector('.term');
+    if (fromRect) slideFrom(landed, fromRect, 380);
+
+    src.dataset.used = '1';
+    src.classList.add('used');
+    src.removeAttribute('tabindex');
+
+    // the payoff: the exponent turns positive once the move is made
+    if (isPow) {
+        const sup = landed.querySelector('sup');
+        sup.innerHTML = `<span class="exp-sign t2">&minus;</span>`
+                      + `<span class="exp-num t2">${sup.textContent.replace(/\u2212|-/g, '').trim()}</span>`;
+        later(() => flipSign(sup.querySelector('.exp-sign'), sup.querySelector('.exp-num')), 400);
+    } else {
+        const stem = slot.dataset.blk;
+        const pair = [...$('step-flip').querySelectorAll(`.drop-slot[data-blk="${stem}"]`)];
+        if (pair.every(s => s.classList.contains('filled'))) {
+            later(() => flipSign($(`sgn-${stem}`), $(`exn-${stem}`)), 400);
+        }
+    }
+
+    const left = liveSources();
+    if (left.length) {
+        say(src.dataset.kind === 'fbase'
+            ? 'Good — that piece crossed the bar.'
+            : 'Good — it crossed the bar and the exponent went positive.', 'correct');
+    } else {
+        later(() => {
+            say('Every negative exponent is gone.', 'correct');
+            phase = 'expand';
+            setHint('Now write each power out as repeated multiplication.');
+        }, 800);
+        // the scaffold has done its job once the move is made
+        later(dissolveScaffolds, 1300);
+        later(doExpand, 2800);
+    }
+}
+
+function dissolveScaffolds() {
+    $('step-flip').querySelectorAll('.frac.scaffold').forEach(f => f.classList.add('dissolved'));
+}
+
+function flipSign(sign, num) {
+    if (!sign || !num) return;
+    sign.classList.add('gone');
+    sign.setAttribute('aria-hidden', 'true');
+    num.classList.remove('t2');
+    num.classList.add('flipped');
+}
+
+/* ============================================================
+   Step 2 — expand into repeated multiplication
+   ============================================================ */
+function doExpand() {
+    if (phase !== 'expand') return;      // the auto-advance and "Show me" must not both fire
+    $('eq-2').classList.remove('off');
+    const step = $('step-expand');
+    step.innerHTML = expandHtml();
+    sizeClass(step, A.factors);
+    step.classList.remove('off');
+    step.classList.add('pop');
+    later(() => step.classList.remove('pop'), 400);
+
+    $('act-btn').classList.add('off');
+
+    const zeroPower = P.groups.some(g => g.num.concat(g.den).some(i => i.k === 'p' && i.e === 0));
+    if (A.cancels) armCancel(zeroPower);
+    else {
+        say(zeroPower ? 'Remember: anything to the zero power is just 1.'
+                      : 'Nothing cancels here — go straight to the value.', 'correct');
+        openAnswer();
+    }
+}
+
+/* ============================================================
+   Step 3 — the student clicks whatever cancels
+   ============================================================ */
+const facts = (gi, side) =>
+    [...$('step-expand').querySelectorAll(`.fact[data-g="${gi}"][data-side="${side}"]`)];
+function struckVals(gi, side) {
+    const list = side === 'num' ? A.groups[gi].top : A.groups[gi].bot;
+    return facts(gi, side).map((f, k) => f.classList.contains('struck') ? list[k].v : null)
+                          .filter(v => v !== null);
+}
+const prodOf = vals => vals.reduce((p, v) => p * v, 1);
+
+function armCancel(zeroPower) {
+    phase = 'cancel';
+    say(zeroPower ? 'The zero power became 1. Now look for factors that match.'
+                  : 'Some factors on top and bottom are worth the same thing.', 'correct');
+    setHint('Click every factor you can cancel — on the top and on the bottom.');
+    $('step-expand').querySelectorAll('.fact').forEach(f => {
+        if (A.groups[+f.dataset.g].cut.p === 1) return;   // nothing cancels in that group
+        f.classList.add('pickable');
+        f.setAttribute('tabindex', '0');
+        f.setAttribute('role', 'button');
+        f.setAttribute('aria-pressed', 'false');
+        f.addEventListener('click', toggleFact);
+        f.addEventListener('keydown', onFactKey);
+    });
+}
+
+function onFactKey(e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    toggleFact({ currentTarget: e.currentTarget });
+}
+
+function toggleFact(e) {
+    if (phase !== 'cancel') return;
+    const f = e.currentTarget;
+    const on = f.classList.toggle('struck');
+    f.setAttribute('aria-pressed', on ? 'true' : 'false');
+    refreshDots(f.dataset.g, f.dataset.side);
+    judgeCancel();
+}
+
+// a dot is crossed out only when the factors on both sides of it are
+function refreshDots(gi, side) {
+    const list = facts(gi, side);
+    $('step-expand').querySelectorAll(`.dot[data-g="${gi}"][data-side="${side}"]`).forEach(d => {
+        const k = +d.dataset.k;
+        const both = list[k] && list[k + 1]
+            && list[k].classList.contains('struck') && list[k + 1].classList.contains('struck');
+        d.classList.toggle('struck', both);
+    });
+}
+
+function judgeCancel() {
+    let anyStruck = false, allDone = true, uneven = null;
+
+    A.groups.forEach((gr, gi) => {
+        if (gr.cut.p === 1) return;
+        const t = prodOf(struckVals(gi, 'num')), b = prodOf(struckVals(gi, 'den'));
+        if (t !== 1 || b !== 1) anyStruck = true;
+        if (t !== b) { uneven = t > b ? 'top' : 'bottom'; allDone = false; }
+        else if (t !== gr.cut.p) allDone = false;
+    });
+
+    if (!anyStruck) { say('', ''); return; }
+    if (uneven) { say(`Not even yet — you have crossed out more on the ${uneven}.`, 'nudge'); return; }
+    if (allDone) lockCancel();
+    else say('Even so far — but there is still more that cancels.', 'nudge');
+}
+
+function lockCancel() {
+    phase = 'locked';
+    $('step-expand').querySelectorAll('.fact').forEach(f => {
+        f.classList.remove('pickable');
+        f.removeAttribute('tabindex');
+        f.removeAttribute('role');
+    });
+
+    // if a whole row cancelled away, spell out that what is left there is 1
+    let cleared = null;
+    A.groups.forEach((gr, gi) => {
+        if (gr.cut.p === 1) return;
+        if (gr.cutTop === gr.top.length) { later(() => tailOne(gi, 'num'), 350); cleared = 'top'; }
+        if (gr.cutBot === gr.bot.length) { later(() => tailOne(gi, 'den'), 350); cleared = 'bottom'; }
+    });
+
+    if (cleared) say(`The whole ${cleared} cancelled, so the ${cleared} is 1.`, 'correct');
+    else say('That is everything that cancels.', 'correct');
+
+    later(() => {
+        if (showLeftStep()) {
+            $('eq-3').classList.remove('off');
+            const step = $('step-left');
+            step.innerHTML = leftHtml();
+            step.classList.remove('off');
+            step.classList.add('pop');
+            later(() => step.classList.remove('pop'), 400);
+        }
+        openAnswer();
+    }, cleared ? 1400 : 750);
+}
+
+// only worth a line of its own if it is not just the answer written twice
+function showLeftStep() {
+    if (!A.cancels) return false;
+    if (A.groups.length > 1) return true;
+    const g0 = A.groups[0];
+    return !(g0.remTopVal === A.answer.n && g0.remBotVal === A.answer.d);
+}
+
+function tailOne(gi, side) {
+    const sel = side === 'num' ? '.num' : '.denom';
+    const grp = $('step-expand').querySelectorAll('.grp')[gi];
+    const row = grp && grp.querySelector(sel);
+    if (!row || row.querySelector('.tail-one')) return;
+    const dot = document.createElement('span');
+    dot.className = 'dot tail pop';
+    dot.innerHTML = '&middot;';
+    const one = document.createElement('span');
+    one.className = 'tail-one pop';
+    one.textContent = '1';
+    row.append(dot, one);
+    later(() => { dot.classList.remove('pop'); one.classList.remove('pop'); }, 400);
+}
+
+/* ============================================================
+   Step 4 — the student types the value
+   ============================================================ */
+function openAnswer() {
+    phase = 'answer';
+    $('eq-4').classList.remove('off');
+    const step = $('step-ans');
+    step.innerHTML = `<input class="ans-input" id="ans" type="text" inputmode="numeric"
+                             autocomplete="off" spellcheck="false" aria-label="Your answer">`;
+    step.classList.remove('off');
+    setHint('Type the value — a whole number, or a fraction like 1/5.');
+    $('check-btn').classList.remove('off');
+
+    const input = $('ans');
+    input.addEventListener('input', () => {
+        input.classList.remove('wrong');
+        if ($('feedback').classList.contains('nudge')) say('', '');
+        const got = parseAnswer(input.value);
+        if (got && isRight(got)) finish();      // a right answer accepts itself
+    });
+    input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); checkAnswer(); }
+    });
+    later(() => { if (!turninOpen()) input.focus(); }, 250);
+}
+
+function parseAnswer(raw) {
+    const s = raw.trim().replace(/\s+/g, '').replace(/\u2212/g, '-');
+    if (!s) return null;
+    if (/^-?\d+$/.test(s)) return { n: +s, d: 1 };
+    const f = s.match(/^(-?\d+)\/(-?\d+)$/);
+    if (f && +f[2] !== 0) return { n: +f[1], d: +f[2] };
+    if (/^-?\d*\.\d+$/.test(s)) return { dec: parseFloat(s) };
+    return null;
+}
+
+function isRight(got) {
+    return got.dec !== undefined
+        ? Math.abs(got.dec - A.answer.n / A.answer.d) < 1e-9
+        : got.n * A.answer.d === A.answer.n * got.d;
+}
+
+function checkAnswer() {
+    if (phase !== 'answer') return;
+    const input = $('ans');
+    const got = parseAnswer(input.value);
+
+    if (!got) {
+        input.classList.add('wrong');
+        say('Type a number, or a fraction like 1/5.', 'nudge');
+        return;
+    }
+    if (isRight(got)) { finish(); return; }
+
+    flubbed = true;
+    input.classList.add('wrong');
+    input.select();
+    if (A.groups.length === 1) {
+        const g0 = A.groups[0];
+        $('feedback').innerHTML = `Not yet — work out ${valHtml(g0.remTopVal)} &divide; ${g0.remBotVal}.`;
+    } else {
+        $('feedback').textContent = 'Not yet — work out each piece, then add them.';
+    }
+    $('feedback').className = 'feedback nudge';
+}
+
+function finish() {
+    $('step-ans').innerHTML = answerHtml();
+    $('check-btn').classList.add('off');
+
+    if (needsMixed()) {
+        say('Correct!', 'correct');
+        phase = 'wait';
+        later(() => openMixed(), 700);
+        return;
+    }
+    setHint('');
+    const chain = divisionChain(P);
+    const recip = reciprocalChain();
+    if (recip) {
+        const f = $('feedback');
+        f.innerHTML = `<div>Correct!</div>${recip}`;
+        f.className = 'feedback correct';
+    } else if (chain) {
+        const f = $('feedback');
+        f.innerHTML = `<div>Correct!</div><div class="divnote">This kind of problem is repeated division:`
+            + `<span class="divchain">${chain} = ${answerPlain()}</span></div>`;
+        f.className = 'feedback correct';
+    } else {
+        say('Correct!', 'correct');
+    }
+    endProblem();
+}
+
+/* 1 over a power with a negative exponent — like 1/6^-3 — written out the long way:
+   1/6^-3 = 1/(1/6^3) = 1 ÷ 1/6^3 = 1/1 × 6^3/1 = 6^3 = 6 · 6 · 6 = 216.
+   Returns that as two lines of markup, or null for any other shape. */
+function reciprocalChain() {
+    if (P.groups.length !== 1) return null;
+    const g = P.groups[0];
+    if (g.neg || g.num.length || g.den.length !== 1) return null;
+    const it = g.den[0];
+    if (it.k !== 'p' || it.e >= 0) return null;
+
+    const b = baseHtml(it.b), n = -it.e;
+    const negPow = `<span>${b}<sup>&minus;${n}</sup></span>`;
+    const posPow = n === 1 ? b : `<span>${b}<sup>${n}</sup></span>`;
+    const eq = '<span class="op">=</span>';
+    const steps = [
+        frac(1, negPow),
+        frac(1, frac(1, posPow)),
+        `1 <span class="op">&divide;</span> ${frac(1, posPow)}`,
+        `${frac(1, 1)} <span class="op">&times;</span> ${frac(posPow, 1)}`,
+        posPow
+    ];
+    if (n > 1) steps.push(Array(n).fill(valHtml(it.b)).join(' &middot; '));
+    steps.push(answerPlain());
+
+    // each step keeps its own = sign, so a narrow screen breaks between steps, never inside one
+    const pieces = steps.map((h, k) =>
+        `<span class="piece">${k ? '<span class="op">=</span>' : ''}${h}</span>`).join('');
+    return `<div class="divnote recip"><span class="divchain">${pieces}</span></div>`;
+}
+
+// the finished value, drawn small for the note under a repeated-division problem
+function answerPlain() {
+    const { n, d } = A.answer;
+    const body = d === 1 ? `${Math.abs(n)}` : frac(Math.abs(n), d);
+    return (n < 0 ? '&minus;' : '') + body;
+}
+
+function endProblem() {
+    phase = 'done';
+    records.push({ q: problemText(P), a: answerText(), clean: !flubbed });
+    const n = $('next-btn');
+    const reached = records.length === GOAL;
+    n.textContent = reached ? 'Turn in my work' : 'Next problem';
+    n.dataset.turnin = reached ? '1' : '';
+    n.classList.remove('off');
+    n.focus();
+}
+
+/* ============================================================
+   Turning it in
+   ------------------------------------------------------------
+   After the 21st problem the student lands on a page with their
+   work and a form that posts to the class Google Form, the same
+   form and fields as the fractions extra credit. The Turn in
+   button at the top opens the same page at any time, so a student
+   who runs out of time can send what they have; they can go back,
+   keep working, and send again (the newer one counts).
+   ============================================================ */
+const SUP = { '0': '\u2070', '1': '\u00b9', '2': '\u00b2', '3': '\u00b3', '4': '\u2074',
+              '5': '\u2075', '6': '\u2076', '7': '\u2077', '8': '\u2078', '9': '\u2079', '-': '\u207b' };
+const supText = e => e === 1 ? '' : String(e).split('').map(c => SUP[c]).join('');
+const numText = v => v < 0 ? `(\u2212${-v})` : `${v}`;
+const itemText = it => it.k === 'p'
+    ? `${numText(it.b)}${supText(it.e)}`
+    : `(${it.n < 0 ? '\u2212' + -it.n : it.n}/${it.d < 0 ? '\u2212' + -it.d : it.d})${supText(it.e)}`;
+
+function problemText(prob) {
+    return prob.groups.map(g => {
+        const n = g.num.map(itemText).join(' \u00b7 ');
+        const d = g.den.map(itemText).join(' \u00b7 ');
+        return (g.neg ? '\u2212' : '') + (d ? `${n || '1'} / ${d}` : n);
+    }).join(' + ');
+}
+
+function answerText() {
+    const { n, d } = A.answer;
+    const sign = n < 0 ? '\u2212' : '';
+    if (d === 1) return `${sign}${Math.abs(n)}`;
+    let t = `${sign}${Math.abs(n)}/${d}`;
+    if (needsMixed()) { const m = mixedParts(); t += ` = ${sign}${m.w} ${m.r}/${m.d}`; }
+    return t;
+}
+
+const escHtml = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const cleanCount = () => records.filter(r => r.clean).length;
+const turninOpen = () => !$('turnin').classList.contains('off');
+
+function showTurnIn() {
+    const done = records.length, clean = cleanCount();
+    if (done >= GOAL) {
+        $('ti-title').textContent = done > GOAL ? `${done} problems done` : `All ${GOAL} done`;
+        $('ti-sub').textContent = 'Enter your period and name to turn in your work. '
+            + 'After that you can keep practicing as long as you like.';
+        $('ti-after-lab').textContent = 'Want more practice?';
+        $('ti-back').textContent = 'Keep practicing';
+    } else {
+        $('ti-title').textContent = 'Turn in your work so far';
+        $('ti-sub').textContent = `You have finished ${done} of ${GOAL}. Enter your period and name to turn in what you have. `
+            + 'Nothing is lost \u2014 you can go back, keep working, and send it again. The newer one counts.';
+        $('ti-after-lab').textContent = 'Not done yet?';
+        $('ti-back').textContent = 'Go back and keep working';
+    }
+    $('ti-recap').innerHTML =
+        `<div>Problems<b>${done}</b></div>`
+        + `<div>Right the first time<b>${clean}</b></div>`
+        + `<div>Needed a retry<b>${done - clean}</b></div>`;
+    $('ti-log').innerHTML = done
+        ? '<div class="ti-log">' + records.map((r, i) =>
+            `<div class="ti-row"><span class="ti-n">${i + 1}.</span>`
+            + `<span class="ti-q">${escHtml(r.q)} = ${escHtml(r.a)}</span>`
+            + `<span class="ti-k${r.clean ? '' : ' retry'}">${r.clean ? 'first try' : 'retry'}</span></div>`
+          ).join('') + '</div>'
+        : '<div class="ti-empty">Nothing finished yet \u2014 finished problems show up here.</div>';
+
+    const more = submitted && done > submittedAt;
+    $('gform').classList.toggle('off', submitted && !more);
+    if (more) {
+        $('ti-feedback').innerHTML = `<span class="note">You turned in ${submittedAt} \u2014 you have ${done} now. `
+            + 'Send it again and the newer one counts.</span>';
+        $('ti-submit').textContent = 'Send updated results';
+    } else if (!submitted) {
+        $('ti-feedback').innerHTML = '';
+        $('ti-submit').textContent = 'Submit Results';
+    }
+    $('formScore').value = done;
+
+    $('turnin').classList.remove('off');
+    $('turnin').scrollTop = 0;
+    if (!submitted || more) setTimeout(() => $(submitted ? 'ti-submit' : 'studentPeriod').focus(), 50);
+}
+
+// back to the drill: a finished problem moves on, a half-done one is left right where it was
+function backToPractice() {
+    $('turnin').classList.add('off');
+    if (phase === 'done') {
+        if ($('next-btn').dataset.turnin === '1') { $('next-btn').focus(); return; }
+        loadProblem();
+    } else {
+        const input = $('ans');
+        if (input) input.focus();
+    }
+}
+
+function onHiddenFrameLoad() {
+    if (!submitted) return;
+    $('ti-feedback').innerHTML = '<span class="ok">Successfully submitted. '
+        + (records.length >= GOAL
+            ? 'You can close this page, or keep practicing.'
+            : 'You can close this page, or go back and keep working.')
+        + '</span>';
+    $('gform').classList.add('off');
+}
+
+function nameCheck() {
+    const ln = $('lastName').value.trim(), fn = $('firstName').value.trim();
+    const row = (t, v) => `<div class="row"><span class="t">${t}</span>`
+        + `<span class="v${v ? '' : ' empty'}">${v ? escHtml(v) : '\u2014'}</span></div>`;
+    $('nameCheck').innerHTML =
+        '<div class="head">This is what will be sent \u2014 check it is the right way round:</div>'
+        + row('Last name', ln) + row('First name', fn) + row('Roll call', ln && fn ? `${ln}, ${fn}` : '');
+}
+['lastName', 'firstName'].forEach(id => $(id).addEventListener('input', nameCheck));
+nameCheck();
+
+$('gform').addEventListener('submit', () => {
+    const ln = $('lastName').value.trim(), fn = $('firstName').value.trim();
+    $('studentName').value =
+        `Period ${$('studentPeriod').value.trim()} \u2014 ${ln} \u2014 ${fn}`
+        + ` \u2014 ${cleanCount()} clean solves \u2014 ${DRILL_NAME} (${records.length} problems)`;
+    $('formScore').value = records.length;
+    submitted = true;
+    submittedAt = records.length;
+});
+
+$('ti-back').addEventListener('click', backToPractice);
+$('turnin-link').addEventListener('click', showTurnIn);
+
+/* ============================================================
+   Step 5 — an improper answer gets written as a mixed number
+   ------------------------------------------------------------
+   Only worth doing when there is a whole part to pull out, so a
+   proper fraction like 1/5 and a whole number like 64 both skip it.
+   The answer is already reduced, so the remainder is never 0.
+   ============================================================ */
+function needsMixed() {
+    const { n, d } = A.answer;
+    return d !== 1 && Math.abs(n) > d;
+}
+
+function mixedParts() {
+    const { n, d } = A.answer;
+    const a = Math.abs(n);
+    return { neg: n < 0, w: Math.floor(a / d), r: a % d, d, a };
+}
+
+function mixedHtml() {
+    const m = mixedParts();
+    return (m.neg ? '<span class="neg final">&minus;</span>' : '')
+        + `<span class="mixed"><span class="whole final">${m.w}</span>`
+        + frac(`<span class="final">${m.r}</span>`, `<span class="final">${m.d}</span>`)
+        + '</span>';
+}
+
+// the student found the fraction; the drill writes it as a mixed number for them
+function openMixed() {
+    const m = mixedParts();
+    const sign = m.neg ? '&minus;' : '';
+    $('eq-5').classList.remove('off');
+    const step = $('step-mixed');
+    step.innerHTML = mixedHtml();
+    step.classList.remove('off');
+    step.classList.add('pop');
+    later(() => step.classList.remove('pop'), 400);
+    setHint('');
+    $('feedback').innerHTML = '<div>Correct!</div>'
+        + `<div class="divnote">${m.a} &divide; ${m.d} is ${m.w} with ${m.r} left over, so ${sign}${m.a}/${m.d} is ${sign}${m.w} and ${m.r}/${m.d}.</div>`;
+    $('feedback').className = 'feedback correct';
+    endProblem();
+}
+
+/* ============================================================
+   Wiring
+   ============================================================ */
+$('act-btn').addEventListener('click', () => {
+    if (phase === 'expand') doExpand();
+});
+$('check-btn').addEventListener('click', () => {
+    checkAnswer();
+});
+$('next-btn').addEventListener('click', e => {
+    if (e.currentTarget.dataset.turnin === '1') {
+        e.currentTarget.dataset.turnin = '';           // the form comes up once; after it, Next moves on
+        e.currentTarget.textContent = 'Next problem';
+        showTurnIn();
+    }
+    else loadProblem();
+});
+
+document.addEventListener('keydown', e => {
+    const tag = e.target && e.target.tagName;
+    if (walkState && !turninOpen() && tag !== 'INPUT') {
+        if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); $('walk-next').click(); return; }
+        if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); $('walk-back').click(); return; }
+    }
+    if (tag === 'BUTTON' || tag === 'INPUT' || turninOpen()) return;
+    if (e.key === 'Enter' && phase === 'done') {
+        e.preventDefault();
+        $('next-btn').click();
+    }
+});
+
+loadProblem();
+</script>
+
+<script>
+/* ============================================================
+   Big-screen fit: the equation is drawn as large as the screen
+   allows, then shrunk just enough that every step fits.
+   ============================================================ */
+(function () {
+    let chain;
+    let queued = false;
+    const overflows = () =>
+        chain.scrollHeight > chain.clientHeight + 1 || chain.scrollWidth > chain.clientWidth + 1;
+    function fit() {
+        queued = false;
+        const walk = document.getElementById('walk');
+        chain = walk.classList.contains('off') ? document.getElementById('chain') : walk;
+        // measure at full size: pop-in animations start scaled down and would hide overflow
+        document.body.classList.add('fitting');
+        try { fitNow(); } finally { document.body.classList.remove('fitting'); }
+    }
+    function fitNow() {
+        if (typeof drag !== 'undefined' && drag) return;   // never resize under a finger
+        const max = Math.min(window.innerWidth * 0.10, window.innerHeight * 0.17);
+        let lo = 14, hi = max;
+        chain.style.fontSize = hi + 'px';
+        if (!overflows()) return;
+        for (let k = 0; k < 10; k++) {
+            const mid = (lo + hi) / 2;
+            chain.style.fontSize = mid + 'px';
+            if (overflows()) hi = mid; else lo = mid;
+        }
+        chain.style.fontSize = lo + 'px';
+    }
+    const queue = () => { if (!queued) { queued = true; requestAnimationFrame(fit); } };
+    new MutationObserver(recs => {
+        // our own 'fitting' toggle on <body> is not a change worth refitting for
+        if (recs.some(r => r.target !== document.body)) queue();
+    }).observe(document.body,
+        { subtree: true, childList: true, attributes: true, attributeFilter: ['class'], characterData: true });
+    document.getElementById('chain').addEventListener('transitionend', queue);
+    window.addEventListener('resize', queue);
+    document.addEventListener('pointerup', () => setTimeout(queue, 0));
+    queue();
+})();
+</script>
+</body>
+</html>
